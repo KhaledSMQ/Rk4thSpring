@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Spring Animation Examples</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --accent: #e74c3c;
+            --background: #f5f5f5;
+            --text: #2c3e50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Chain Reaction Demo */
+        .chain-container {
+            height: 400px;
+            background: #1a1a1a;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .chain-ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Interactive Chart Demo */
+        .chart-container {
+            height: 300px;
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 0;
+            width: 40px;
+            background: var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .chart-bar:hover {
+            background: var(--secondary);
+        }
+
+        /* Particle System Demo */
+        .particle-container {
+            height: 400px;
+            background: #000;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--primary);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Interactive Cards Demo */
+        .cards-container {
+            height: 400px;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .card-3d {
+            position: absolute;
+            width: 200px;
+            height: 300px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            cursor: grab;
+            transform-style: preserve-3d;
+            user-select: none;
+        }
+
+        .card-3d:active {
+            cursor: grabbing;
+        }
+
+        /* Physics Playground Demo */
+        .playground-container {
+            height: 500px;
+            background: #f0f0f0;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .physics-object {
+            position: absolute;
+            background: var(--primary);
+            border-radius: 8px;
+            cursor: grab;
+        }
+
+        .physics-object:active {
+            cursor: grabbing;
+        }
+
+        /* Controls */
+        .controls {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+<div class="demo-section">
+    <h2>Chain Reaction Animation</h2>
+    <div class="controls">
+        <button class="button" onclick="chainDemo.reset()">Reset Chain</button>
+        <button class="button" onclick="chainDemo.trigger()">Trigger Reaction</button>
+    </div>
+    <div class="chain-container" id="chainContainer"></div>
+</div>
+
+<div class="demo-section">
+    <h2>Interactive Spring Chart</h2>
+    <div class="controls">
+        <button class="button" onclick="chartDemo.randomize()">Randomize Data</button>
+        <button class="button" onclick="chartDemo.sort()">Sort Values</button>
+    </div>
+    <div class="chart-container" id="chartContainer"></div>
+</div>
+
+<div class="demo-section">
+    <h2>Spring Particle System</h2>
+    <div class="particle-container" id="particleContainer"></div>
+</div>
+
+<div class="demo-section">
+    <h2>3D Card Stack</h2>
+    <div class="cards-container" id="cardsContainer"></div>
+</div>
+
+<script>
+    const {Rk4thSpring} = Spring;
+
+    // Chain Reaction Demo
+    class ChainReactionDemo {
+        constructor() {
+            this.container = document.getElementById('chainContainer');
+            this.balls = [];
+            this.springs = [];
+            this.numBalls = 10;
+
+            this.setupChain();
+        }
+
+        setupChain() {
+            const spacing = this.container.clientWidth / (this.numBalls + 1);
+
+            for (let i = 0; i < this.numBalls; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'chain-ball';
+
+                const spring = new Rk4thSpring({
+                    mass: 1,
+                    tension: 180,
+                    friction: 12,
+                });
+
+                ball.style.left = `${spacing * (i + 1)}px`;
+                ball.style.top = '190px';
+
+                this.container.appendChild(ball);
+                this.balls.push(ball);
+                this.springs.push(spring);
+
+                ball.addEventListener('click', () => this.triggerBall(i));
+            }
+        }
+
+        triggerBall(index) {
+            const delay = 50;
+            const amplitude = 100;
+            const distance = 1;
+            for (let i = 0; i < this.numBalls; i++) {
+                setTimeout(() => {
+                    const distance = Math.abs(i - index);
+                    const damping = Math.max(0.2, 1 - distance * 0.2);
+
+                    this.springs[i].start(-amplitude * damping, (y) => {
+                        this.balls[i].style.transform = `translateY(${y}px)`;
+                    });
+                }, distance * delay);
+            }
+        }
+
+        trigger() {
+            this.triggerBall(0);
+        }
+
+        reset() {
+            this.springs.forEach((spring, i) => {
+                spring.start(0, (y) => {
+                    this.balls[i].style.transform = `translateY(${y}px)`;
+                });
+            });
+        }
+    }
+
+    // Interactive Chart Demo
+    class ChartDemo {
+        constructor() {
+            this.container = document.getElementById('chartContainer');
+            this.bars = [];
+            this.springs = [];
+            this.data = Array(10).fill(0).map(() => Math.random() * 200 + 50);
+
+            this.setupChart();
+        }
+
+        setupChart() {
+            const barWidth = this.container.clientWidth / (this.data.length * 1.5);
+
+            this.data.forEach((value, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+
+                const spring = new Rk4thSpring({
+                    mass: 1,
+                    tension: 170,
+                    friction: 26,
+                });
+
+                bar.style.left = `${i * (barWidth * 1.5) + barWidth / 2}px`;
+                bar.style.width = `${barWidth}px`;
+
+                this.container.appendChild(bar);
+                this.bars.push(bar);
+                this.springs.push(spring);
+
+                bar.addEventListener('click', () => this.updateBar(i));
+            });
+
+            this.updateChart();
+        }
+
+        updateChart() {
+            this.bars.forEach((bar, i) => {
+                this.springs[i].start(this.data[i], (height) => {
+                    bar.style.height = `${height}px`;
+                });
+            });
+        }
+
+        updateBar(index) {
+            this.data[index] = Math.random() * 200 + 50;
+            this.updateChart();
+        }
+
+        randomize() {
+            this.data = this.data.map(() => Math.random() * 200 + 50);
+            this.updateChart();
+        }
+
+        sort() {
+            this.data.sort((a, b) => a - b);
+            this.updateChart();
+        }
+    }
+
+    // Particle System Demo
+    class ParticleSystemDemo {
+        constructor() {
+            this.container = document.getElementById('particleContainer');
+            this.particles = [];
+            this.springs = [];
+
+            this.setupParticles();
+            this.setupInteraction();
+        }
+
+        setupParticles() {
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+
+                const springX = new Rk4thSpring({mass: 1, tension: 150, friction: 20});
+                const springY = new Rk4thSpring({mass: 1, tension: 150, friction: 20});
+
+                this.container.appendChild(particle);
+                this.particles.push(particle);
+                this.springs.push({x: springX, y: springY});
+            }
+        }
+
+        setupInteraction() {
+            this.container.addEventListener('mousemove', (e) => {
+                const rect = this.container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                this.particles.forEach((particle, i) => {
+                    const delay = i * 20;
+                    setTimeout(() => {
+                        this.springs[i].x.start(x + Math.random() * 100 - 50, (px) => {
+                            particle.style.left = `${px}px`;
+                        });
+                        this.springs[i].y.start(y + Math.random() * 100 - 50, (py) => {
+                            particle.style.top = `${py}px`;
+                        });
+                    }, delay);
+                });
+            });
+        }
+    }
+
+    // Initialize demos
+    let chainDemo, chartDemo, particleDemo, cardStackDemo;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        chainDemo = new ChainReactionDemo();
+        chartDemo = new ChartDemo();
+        particleDemo = new ParticleSystemDemo();
+        cardStackDemo = new CardStackDemo();
+    });
+
+
+    // 3D Cards Stack Demo
+    class CardStackDemo {
+        constructor() {
+            this.container = document.getElementById('cardsContainer');
+            this.cards = [];
+            this.springs = [];
+            this.numCards = 5;
+
+            // Track mouse position for hover effect
+            this.mouseX = 0;
+            this.mouseY = 0;
+
+            // Spring configuration for each transformation type
+            this.springConfigs = {
+                position: {mass: 1, tension: 170, friction: 26},
+                rotation: {mass: 1, tension: 180, friction: 20},
+                hover: {mass: 1, tension: 250, friction: 15},
+            };
+
+            this.setupCards();
+            this.setupMouseTracking();
+        }
+
+        setupCards() {
+            for (let i = 0; i < this.numCards; i++) {
+                const card = document.createElement('div');
+                card.className = 'card-3d';
+                card.style.backgroundColor = `hsl(${i * 360 / this.numCards}, 70%, 60%)`;
+
+                // Create springs for each transformation property
+                const springs = {
+                    x: new Rk4thSpring(this.springConfigs.position),
+                    y: new Rk4thSpring(this.springConfigs.position),
+                    z: new Rk4thSpring(this.springConfigs.position),
+                    rotateX: new Rk4thSpring(this.springConfigs.rotation),
+                    rotateY: new Rk4thSpring(this.springConfigs.rotation),
+                    rotateZ: new Rk4thSpring(this.springConfigs.rotation),
+                };
+
+                // Initial position
+                this.positionCard(card, i);
+
+                // Store card and its springs
+                this.cards.push(card);
+                this.springs.push(springs);
+
+                // Add to container
+                this.container.appendChild(card);
+
+                // Setup drag interaction
+                this.setupDragInteraction(card, i);
+            }
+        }
+
+        positionCard(card, index) {
+            const spacing = 20;
+            const startZ = index * spacing;
+
+            card.style.transform = `
+            translateX(-50%)
+            translateY(-50%)
+            translateZ(${-startZ}px)
+            rotateX(0deg)
+            rotateY(0deg)
+            rotateZ(0deg)
+        `;
+
+            card.style.left = '50%';
+            card.style.top = '50%';
+        }
+
+        setupMouseTracking() {
+            document.addEventListener('mousemove', (e) => {
+                const rect = this.container.getBoundingClientRect();
+                this.mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+                this.mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+
+                this.updateHoverEffect();
+            });
+        }
+
+        updateHoverEffect() {
+            this.cards.forEach((card, i) => {
+                const springs = this.springs[i];
+                const depth = i / (this.numCards - 1);
+
+                // Calculate rotation based on mouse position
+                const rotateX = -this.mouseY * 20 * (1 - depth * 0.5);
+                const rotateY = this.mouseX * 20 * (1 - depth * 0.5);
+
+                // Animate to new rotation
+                springs.rotateX.start(rotateX, (rx) => {
+                    this.updateCardTransform(card, i);
+                });
+
+                springs.rotateY.start(rotateY, (ry) => {
+                    this.updateCardTransform(card, i);
+                });
+            });
+        }
+
+        setupDragInteraction(card, index) {
+            let isDragging = false;
+            let startX = 0;
+            let startY = 0;
+            let startRotation = 0;
+
+            card.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                card.style.zIndex = '100';
+
+                startX = e.clientX - this.springs[index].x.value;
+                startY = e.clientY - this.springs[index].y.value;
+                startRotation = this.springs[index].rotateZ.value;
+
+                // Bring card forward
+                this.springs[index].z.start(100);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                // Calculate rotation based on movement speed
+                const rotateZ = (dx - this.springs[index].x.value) * 0.1;
+
+                this.springs[index].x.start(dx);
+                this.springs[index].y.start(dy);
+                this.springs[index].rotateZ.start(rotateZ);
+
+                this.updateCardTransform(card, index);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                card.style.zIndex = '';
+
+                // Reset card position with spring animation
+                this.springs[index].x.start(0);
+                this.springs[index].y.start(0);
+                this.springs[index].z.start(index * -20);
+                this.springs[index].rotateZ.start(0);
+
+                this.updateCardTransform(card, index);
+            });
+        }
+
+        updateCardTransform(card, index) {
+            const springs = this.springs[index];
+            const transform = `
+            translateX(calc(${springs.x.value}px - 50%))
+            translateY(calc(${springs.y.value}px - 50%))
+            translateZ(${springs.z.value}px)
+            rotateX(${springs.rotateX.value}deg)
+            rotateY(${springs.rotateY.value}deg)
+            rotateZ(${springs.rotateZ.value}deg)
+        `;
+
+            card.style.transform = transform;
+        }
+
+        reset() {
+            this.cards.forEach((card, i) => {
+                const springs = this.springs[i];
+
+                Object.values(springs).forEach(spring => {
+                    spring.start(0);
+                });
+
+                this.positionCard(card, i);
+            });
+        }
+    }
+
+
+</script>
+</body>
+</html>

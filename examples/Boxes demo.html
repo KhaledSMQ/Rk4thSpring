@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spring Animation Library Demo</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .demo-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .animation-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .animated-box {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #4338ca;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #4338ca;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #3730a3;
+        }
+
+        .stats {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .preset-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .bounded-demo .animation-container {
+            border: 2px dashed #ccc;
+        }
+
+        .path-line {
+            position: absolute;
+            height: 2px;
+            background: #e5e7eb;
+            top: 50%;
+            width: 100%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+<h1>Spring Animation Library Demo</h1>
+<p>Click and drag the boxes to interact with different spring animation presets</p>
+
+<div class="demo-container" id="demoContainer"></div>
+
+<script>
+    const {Rk4thSpring} = Spring;
+
+
+    // Demo initialization
+    const presets = {
+        gentle: { title: "Gentle Spring", config: Rk4thSpring.presets.gentle },
+        wobbly: { title: "Wobbly Spring", config: Rk4thSpring.presets.wobbly },
+        stiff: { title: "Stiff Spring", config: Rk4thSpring.presets.stiff },
+        molasses: { title: "Molasses", config: Rk4thSpring.presets.molasses },
+    };
+
+    class AnimationDemo {
+        constructor(preset, config) {
+            this.container = document.createElement('div');
+            this.container.className = 'demo-card';
+
+            this.title = document.createElement('div');
+            this.title.className = 'preset-title';
+            this.title.textContent = preset;
+
+            this.animContainer = document.createElement('div');
+            this.animContainer.className = 'animation-container';
+
+            // Add path line
+            const pathLine = document.createElement('div');
+            pathLine.className = 'path-line';
+            this.animContainer.appendChild(pathLine);
+
+            this.box = document.createElement('div');
+            this.box.className = 'animated-box';
+
+            this.stats = document.createElement('div');
+            this.stats.className = 'stats';
+
+            this.spring = new Rk4thSpring({
+                ...config,
+                onUpdate: (value) => {
+                    this.box.style.left = `${value}px`;
+                    this.updateStats();
+                }
+            });
+
+            // Setup dragging
+            let isDragging = false;
+            let startX, boxStartX;
+
+            this.box.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                boxStartX = parseFloat(this.box.style.left) || 0;
+                this.spring.stop();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const newX = Math.max(0, Math.min(boxStartX + dx, this.animContainer.clientWidth - 40));
+                this.spring.setValue(newX);
+                this.box.style.left = `${newX}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                const currentX = parseFloat(this.box.style.left) || 0;
+                this.spring.start(this.animContainer.clientWidth / 2 - 20);
+            });
+
+            // Build DOM
+            this.animContainer.appendChild(this.box);
+            this.container.appendChild(this.title);
+            this.container.appendChild(this.animContainer);
+            this.container.appendChild(this.stats);
+
+            // Initial position
+            requestAnimationFrame(() => {
+                const centerX = this.animContainer.clientWidth / 2 - 20;
+                this.spring.setValue(centerX);
+                this.box.style.left = `${centerX}px`;
+            });
+        }
+
+        updateStats() {
+            this.stats.textContent = `Position: ${Math.round(this.spring.value)}px | Velocity: ${Math.round(this.spring.velocity)}px/s`;
+        }
+    }
+
+    // Initialize demos
+    document.addEventListener('DOMContentLoaded', () => {
+        const demoContainer = document.getElementById('demoContainer');
+
+        Object.entries(presets).forEach(([name, { title, config }]) => {
+            const demo = new AnimationDemo(title, config);
+            demoContainer.appendChild(demo.container);
+        });
+    });
+</script>
+</body>
+</html>

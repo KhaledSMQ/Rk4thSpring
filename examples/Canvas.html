@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Animation Canvas Examples</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .canvas-container {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #2980b9;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .slider {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+<div class="demo-section">
+    <h2>Spring Particle System</h2>
+    <div class="controls">
+        <button class="button" onclick="particleDemo.addParticles()">Add Particles</button>
+        <button class="button" onclick="particleDemo.explode()">Explode</button>
+        <div class="slider-container">
+            <label>Spring Tension:</label>
+            <input type="range" class="slider" min="50" max="300" value="170"
+                   onchange="particleDemo.updateTension(this.value)">
+        </div>
+    </div>
+    <div class="canvas-container">
+        <canvas id="particleCanvas"></canvas>
+    </div>
+</div>
+
+<div class="demo-section">
+    <h2>Spring Connected Nodes</h2>
+    <div class="controls">
+        <button class="button" onclick="nodeDemo.addNode()">Add Node</button>
+        <button class="button" onclick="nodeDemo.shake()">Shake</button>
+        <div class="slider-container">
+            <label>Connection Strength:</label>
+            <input type="range" class="slider" min="1" max="100" value="50"
+                   onchange="nodeDemo.updateStrength(this.value)">
+        </div>
+    </div>
+    <div class="canvas-container">
+        <canvas id="nodeCanvas"></canvas>
+    </div>
+</div>
+
+<script>
+    const {Rk4thSpring} = Spring;
+    // Utility function for random numbers
+    const random = (min, max) => Math.random() * (max - min) + min;
+
+    // Particle System Demo
+    class ParticleSystemDemo {
+        constructor() {
+            this.canvas = document.getElementById('particleCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.particles = [];
+            this.mouse = { x: 0, y: 0 };
+            this.tension = 170;
+
+            this.resize();
+            this.setupEvents();
+            this.addParticles(50);
+            this.animate();
+        }
+
+        resize() {
+            const rect = this.canvas.parentElement.getBoundingClientRect();
+            this.width = this.canvas.width = rect.width;
+            this.height = this.canvas.height = rect.height;
+            this.centerX = this.width / 2;
+            this.centerY = this.height / 2;
+        }
+
+        setupEvents() {
+            window.addEventListener('resize', () => this.resize());
+            this.canvas.addEventListener('mousemove', (e) => {
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouse.x = e.clientX - rect.left;
+                this.mouse.y = e.clientY - rect.top;
+            });
+        }
+
+        createParticle() {
+            return {
+                x: this.centerX,
+                y: this.centerY,
+                targetX: this.centerX,
+                targetY: this.centerY,
+                vx: random(-5, 5),
+                vy: random(-5, 5),
+                radius: random(2, 6),
+                color: `hsl(${random(0, 360)}, 70%, 60%)`,
+                springX: new Rk4thSpring({ mass: 1, tension: this.tension, friction: 20 }),
+                springY: new Rk4thSpring({ mass: 1, tension: this.tension, friction: 20 })
+            };
+        }
+
+        addParticles(count = 10) {
+            for (let i = 0; i < count; i++) {
+                this.particles.push(this.createParticle());
+            }
+        }
+
+        updateParticle(particle) {
+            // Update spring animations
+            particle.springX.start(particle.targetX, (x) => particle.x = x);
+            particle.springY.start(particle.targetY, (y) => particle.y = y);
+
+            // Calculate distance from mouse
+            const dx = this.mouse.x - particle.x;
+            const dy = this.mouse.y - particle.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Mouse repulsion
+            if (distance < 100) {
+                const force = (100 - distance) / 100;
+                particle.targetX -= dx * force * 0.2;
+                particle.targetY -= dy * force * 0.2;
+            }
+
+            // Boundary checking
+            if (particle.x < 0 || particle.x > this.width) particle.targetX = this.centerX;
+            if (particle.y < 0 || particle.y > this.height) particle.targetY = this.centerY;
+
+            // Add some random movement
+            particle.targetX += particle.vx;
+            particle.targetY += particle.vy;
+
+            // Dampen velocity
+            particle.vx *= 0.99;
+            particle.vy *= 0.99;
+        }
+
+        drawParticle(particle) {
+            this.ctx.beginPath();
+            this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = particle.color;
+            this.ctx.fill();
+
+            // Draw trails
+            this.ctx.beginPath();
+            this.ctx.moveTo(particle.x, particle.y);
+            this.ctx.lineTo(particle.targetX, particle.targetY);
+            this.ctx.strokeStyle = particle.color;
+            this.ctx.globalAlpha = 0.1;
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1;
+        }
+
+        explode() {
+            this.particles.forEach(particle => {
+                particle.vx = random(-20, 20);
+                particle.vy = random(-20, 20);
+            });
+        }
+
+        updateTension(value) {
+            this.tension = Number(value);
+            this.particles.forEach(particle => {
+                particle.springX.tension = this.tension;
+                particle.springY.tension = this.tension;
+            });
+        }
+
+        animate() {
+            this.ctx.fillStyle = 'rgba(26, 26, 26, 0.1)';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+
+            this.particles.forEach(particle => {
+                this.updateParticle(particle);
+                this.drawParticle(particle);
+            });
+
+            requestAnimationFrame(() => this.animate());
+        }
+    }
+
+    // Connected Nodes Demo
+    class ConnectedNodesDemo {
+        constructor() {
+            this.canvas = document.getElementById('nodeCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.nodes = [];
+            this.connectionStrength = 0.5;
+
+            this.resize();
+            this.setupEvents();
+            this.addInitialNodes();
+            this.animate();
+        }
+
+        resize() {
+            const rect = this.canvas.parentElement.getBoundingClientRect();
+            this.width = this.canvas.width = rect.width;
+            this.height = this.canvas.height = rect.height;
+        }
+
+        setupEvents() {
+            window.addEventListener('resize', () => this.resize());
+            this.canvas.addEventListener('mousemove', (e) => {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Move nearest node
+                const nearest = this.findNearestNode(x, y);
+                if (nearest && nearest.distance < 100) {
+                    nearest.node.targetX = x;
+                    nearest.node.targetY = y;
+                }
+            });
+        }
+
+        createNode(x, y) {
+            return {
+                x: x,
+                y: y,
+                targetX: x,
+                targetY: y,
+                baseX: x,
+                baseY: y,
+                springX: new Rk4thSpring({ mass: 1, tension: 120, friction: 14 }),
+                springY: new Rk4thSpring({ mass: 1, tension: 120, friction: 14 })
+            };
+        }
+
+        addInitialNodes() {
+            const spacing = 100;
+            const rows = Math.floor(this.height / spacing);
+            const cols = Math.floor(this.width / spacing);
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const x = (j + 0.5) * spacing;
+                    const y = (i + 0.5) * spacing;
+                    this.nodes.push(this.createNode(x, y));
+                }
+            }
+        }
+
+        addNode() {
+            const x = random(0, this.width);
+            const y = random(0, this.height);
+            this.nodes.push(this.createNode(x, y));
+        }
+
+        findNearestNode(x, y) {
+            let nearest = null;
+            let minDistance = Infinity;
+
+            this.nodes.forEach(node => {
+                const dx = x - node.x;
+                const dy = y - node.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = { node, distance };
+                }
+            });
+
+            return nearest;
+        }
+
+        updateNode(node) {
+            // Spring to target position
+            node.springX.start(node.targetX, (x) => node.x = x);
+            node.springY.start(node.targetY, (y) => node.y = y);
+
+            // Return to base position
+            node.targetX += (node.baseX - node.targetX) * this.connectionStrength * 0.1;
+            node.targetY += (node.baseY - node.targetY) * this.connectionStrength * 0.1;
+        }
+
+        drawConnections() {
+            this.ctx.beginPath();
+            this.nodes.forEach((node, i) => {
+                this.nodes.slice(i + 1).forEach(other => {
+                    const dx = other.x - node.x;
+                    const dy = other.y - node.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 150) {
+                        this.ctx.moveTo(node.x, node.y);
+                        this.ctx.lineTo(other.x, other.y);
+                        this.ctx.strokeStyle = `rgba(255,255,255,${1 - distance/150})`;
+                        this.ctx.stroke();
+                    }
+                });
+            });
+        }
+
+        shake() {
+            this.nodes.forEach(node => {
+                node.targetX += random(-50, 50);
+                node.targetY += random(-50, 50);
+            });
+        }
+
+        updateStrength(value) {
+            this.connectionStrength = value / 100;
+        }
+
+        animate() {
+            this.ctx.fillStyle = 'rgba(26, 26, 26, 1)';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+
+            this.drawConnections();
+
+            this.nodes.forEach(node => {
+                this.updateNode(node);
+
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, 4, 0, Math.PI * 2);
+                this.ctx.fillStyle = 'white';
+                this.ctx.fill();
+            });
+
+            requestAnimationFrame(() => this.animate());
+        }
+    }
+
+    // Initialize demos
+    let particleDemo, nodeDemo;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        particleDemo = new ParticleSystemDemo();
+        nodeDemo = new ConnectedNodesDemo();
+    });
+</script>
+</body>
+</html>

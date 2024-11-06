@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Force-Directed Tree</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f1f5f9;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .tree-container {
+            width: 100%;
+            height: 800px;
+            background: white;
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            touch-action: none;
+        }
+
+        .node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            transition: background-color 0.2s;
+            z-index: 1;
+        }
+
+        .node:active {
+            cursor: grabbing;
+        }
+
+        .node-inner {
+            width: 12px;
+            height: 12px;
+            background: #3b82f6;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .node.parent .node-inner {
+            width: 24px;
+            height: 24px;
+            background: #1d4ed8;
+        }
+
+        .node:hover .node-inner {
+            transform: scale(1.2);
+        }
+
+        .node.dragging .node-inner {
+            transform: scale(1.3);
+            background: #2563eb;
+        }
+
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: #93c5fd;
+            transform-origin: left center;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            width: 150px;
+        }
+
+        label {
+            font-size: 14px;
+            color: #64748b;
+            min-width: 100px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+<div class="tree-container" id="treeContainer"></div>
+<div class="controls">
+    <div class="control-group">
+        <label>Spring Tension</label>
+        <input type="range" class="slider" id="tensionSlider" min="50" max="500" value="120">
+    </div>
+    <div class="control-group">
+        <label>Damping</label>
+        <input type="range" class="slider" id="dampingSlider" min="5" max="100" value="30">
+    </div>
+    <div class="control-group">
+        <label>Node Distance</label>
+        <input type="range" class="slider" id="distanceSlider" min="50" max="300" value="150">
+    </div>
+    <button id="resetBtn">Reset Position</button>
+</div>
+
+<script>
+    const {Rk4thSpring} = Spring;
+
+    class TreeNode {
+        constructor(id, x, y, parent = null) {
+            this.id = id;
+            this.x = x;
+            this.y = y;
+            this.parent = parent;
+            this.children = [];
+            this.springX = new Rk4thSpring({
+                mass: 1,
+                tension: 120,
+                friction: 30,
+                initialValue: x
+            });
+            this.springY = new Rk4thSpring({
+                mass: 1,
+                tension: 120,
+                friction: 30,
+                initialValue: y
+            });
+            this.element = this.createNodeElement();
+            this.connection = parent ? this.createConnection() : null;
+            this.isDragging = false;
+            this.setupDrag();
+        }
+
+        createNodeElement() {
+            const node = document.createElement('div');
+            node.className = 'node' + (this.parent ? '' : ' parent');
+            node.id = `node-${this.id}`;
+            const inner = document.createElement('div');
+            inner.className = 'node-inner';
+            node.appendChild(inner);
+            treeContainer.appendChild(node);
+            return node;
+        }
+
+        createConnection() {
+            const connection = document.createElement('div');
+            connection.className = 'connection';
+            treeContainer.appendChild(connection);
+            return connection;
+        }
+
+        setupDrag() {
+            this.element.addEventListener('pointerdown', (e) => {
+                this.isDragging = true;
+                this.element.setPointerCapture(e.pointerId);
+                this.element.classList.add('dragging');
+                const rect = treeContainer.getBoundingClientRect();
+                this.dragStartX = e.clientX - rect.left - this.x;
+                this.dragStartY = e.clientY - rect.top - this.y;
+                e.stopPropagation();
+            });
+
+            this.element.addEventListener('pointermove', (e) => {
+                if (!this.isDragging) return;
+                const rect = treeContainer.getBoundingClientRect();
+                const newX = e.clientX - rect.left - this.dragStartX;
+                const newY = e.clientY - rect.top - this.dragStartY;
+
+                this.springX.setValue(newX);
+                this.springY.setValue(newY);
+                this.x = newX;
+                this.y = newY;
+            });
+
+            this.element.addEventListener('pointerup', () => {
+                this.isDragging = false;
+                this.element.classList.remove('dragging');
+            });
+        }
+
+        update() {
+            if (!this.isDragging) {
+                let forceX = 0;
+                let forceY = 0;
+
+                // Repulsion from other nodes
+                nodes.forEach(other => {
+                    if (other === this) return;
+                    const dx = this.x - other.x;
+                    const dy = this.y - other.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy) + 1;
+                    const force = 2000 / (distance * distance);
+                    forceX += (dx / distance) * force;
+                    forceY += (dy / distance) * force;
+                });
+
+                // Attraction to parent/children
+                const nodeDistance = parseInt(distanceSlider.value);
+                if (this.parent) {
+                    const dx = this.x - this.parent.x;
+                    const dy = this.y - this.parent.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy) + 1;
+                    forceX -= (dx / distance) * (distance - nodeDistance) * 0.05;
+                    forceY -= (dy / distance) * (distance - nodeDistance) * 0.05;
+                }
+
+                this.children.forEach(child => {
+                    const dx = this.x - child.x;
+                    const dy = this.y - child.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy) + 1;
+                    forceX -= (dx / distance) * (distance - nodeDistance) * 0.05;
+                    forceY -= (dy / distance) * (distance - nodeDistance) * 0.05;
+                });
+
+                // Center gravity for root node only
+                if (!this.parent) {
+                    const centerX = treeContainer.offsetWidth / 2;
+                    const centerY = treeContainer.offsetHeight / 2;
+                    forceX -= (this.x - centerX) * 0.02;
+                    forceY -= (this.y - centerY) * 0.02;
+                }
+
+                this.springX.velocity += forceX;
+                this.springY.velocity += forceY;
+            }
+
+            this.springX.start(this.x);
+            this.springY.start(this.y);
+
+            this.x = this.springX.value;
+            this.y = this.springY.value;
+
+            // Boundary constraints
+            const margin = 50;
+            this.x = Math.max(margin, Math.min(treeContainer.offsetWidth - margin, this.x));
+            this.y = Math.max(margin, Math.min(treeContainer.offsetHeight - margin, this.y));
+
+            this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+
+            if (this.connection && this.parent) {
+                const dx = this.x - this.parent.x;
+                const dy = this.y - this.parent.y;
+                const angle = Math.atan2(dy, dx);
+                const length = Math.sqrt(dx * dx + dy * dy);
+
+                this.connection.style.width = `${length}px`;
+                this.connection.style.left = `${this.parent.x}px`;
+                this.connection.style.top = `${this.parent.y}px`;
+                this.connection.style.transform = `rotate(${angle}rad)`;
+            }
+        }
+
+        updateSpringConfig(tension, damping) {
+            this.springX.tension = tension;
+            this.springY.tension = tension;
+            this.springX.friction = damping;
+            this.springY.friction = damping;
+        }
+    }
+
+    const treeContainer = document.getElementById('treeContainer');
+    const tensionSlider = document.getElementById('tensionSlider');
+    const dampingSlider = document.getElementById('dampingSlider');
+    const distanceSlider = document.getElementById('distanceSlider');
+    const resetBtn = document.getElementById('resetBtn');
+    let nodes = [];
+
+    function createTree() {
+        const centerX = treeContainer.offsetWidth / 2;
+        const centerY = treeContainer.offsetHeight / 2;
+        let nodeId = 0;
+
+        // Clear existing nodes
+        while (treeContainer.firstChild) {
+            treeContainer.removeChild(treeContainer.firstChild);
+        }
+        nodes = [];
+
+        // Create root
+        const root = new TreeNode(nodeId++, centerX, centerY);
+        nodes.push(root);
+
+        // Create first level
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            const radius = 200;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            const child = new TreeNode(nodeId++, x, y, root);
+            root.children.push(child);
+            nodes.push(child);
+
+            // Create second level
+            for (let j = 0; j < 3; j++) {
+                const childAngle = angle + (j - 1) * 0.5;
+                const childRadius = 150;
+                const childX = x + Math.cos(childAngle) * childRadius;
+                const childY = y + Math.sin(childAngle) * childRadius;
+                const grandChild = new TreeNode(nodeId++, childX, childY, child);
+                child.children.push(grandChild);
+                nodes.push(grandChild);
+
+                // Create some third level nodes
+                if (Math.random() < 0.5) {
+                    const leafAngle = childAngle + (Math.random() - 0.5) * 0.5;
+                    const leafRadius = 100;
+                    const leafX = childX + Math.cos(leafAngle) * leafRadius;
+                    const leafY = childY + Math.sin(leafAngle) * leafRadius;
+                    const leaf = new TreeNode(nodeId++, leafX, leafY, grandChild);
+                    grandChild.children.push(leaf);
+                    nodes.push(leaf);
+                }
+            }
+        }
+    }
+
+    function updateSpringConfig() {
+        const tension = parseInt(tensionSlider.value);
+        const damping = parseInt(dampingSlider.value);
+        nodes.forEach(node => node.updateSpringConfig(tension, damping));
+    }
+
+    tensionSlider.addEventListener('input', updateSpringConfig);
+    dampingSlider.addEventListener('input', updateSpringConfig);
+    resetBtn.addEventListener('click', createTree);
+
+    function animate() {
+        nodes.forEach(node => node.update());
+        requestAnimationFrame(animate);
+    }
+
+    // Initial setup
+    createTree();
+    animate();
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        createTree();
+    });
+</script>
+</body>
+</html>

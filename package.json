@@ -1,0 +1,45 @@
+{
+  "name": "rk-4th-spring",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/types/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "LICENSE",
+    "README.md",
+    "examples"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "dev": "vite",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "animation",
+    "spring",
+    "physics",
+    "motion"
+  ],
+  "sideEffects": false,
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "terser": "^5.36.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vite-plugin-banner": "^0.8.0",
+    "vite-plugin-dts": "^4.3.0",
+    "vitest": "^2.1.4"
+  }
+}

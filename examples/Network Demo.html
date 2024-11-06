@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Spring Network</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        .demo-advanced {
+            background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            box-shadow: inset 0 2px 4px 0 rgba(255, 255, 255, 0.7),
+            0 8px 16px -4px rgba(0, 0, 0, 0.1);
+        }
+
+        .spring-point {
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: absolute;
+            cursor: grab;
+            transform: translate(-50%, -50%);
+            transition: background 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .spring-point:hover {
+            background: #2563eb;
+        }
+
+        .spring-point.active {
+            background: #1d4ed8;
+            cursor: grabbing;
+            width: 20px;
+            height: 20px;
+        }
+
+        .spring-target {
+            width: 100px;
+            height: 100px;
+            background: #1d4ed8;
+            border-radius: 12px;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: move;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+            0 0 0 2px rgba(255, 255, 255, 0.1);
+            transition: box-shadow 0.2s;
+        }
+
+        .spring-target:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2),
+            0 0 0 4px rgba(255, 255, 255, 0.2);
+        }
+
+        .spring-target.active {
+            cursor: grabbing;
+        }
+
+        .spring-line {
+            position: absolute;
+            height: 2px;
+            background: #93c5fd;
+            transform-origin: left center;
+            pointer-events: none;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .spring-line::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: -4px;
+            width: 8px;
+            height: 4px;
+            background: #3b82f6;
+            border-radius: 4px;
+        }
+
+        .controls-advanced {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .value-display {
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #0f172a;
+            min-width: 3rem;
+            text-align: right;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #e2e8f0;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .presets {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .preset-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .visualization {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            right: 1rem;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .viz-bar {
+            flex: 1;
+            background: #3b82f6;
+            transition: height 0.1s;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+<div class="demo-container">
+    <h2>Advanced Spring Network</h2>
+
+    <div class="controls-advanced">
+        <div class="control-group">
+            <div class="control-header">
+                <label class="control-label">Spring Tension</label>
+                <span class="value-display" id="tensionValue">170</span>
+            </div>
+            <input type="range" class="slider" id="tensionSlider" min="50" max="500" value="170">
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <label class="control-label">Friction</label>
+                <span class="value-display" id="frictionValue">26</span>
+            </div>
+            <input type="range" class="slider" id="frictionSlider" min="5" max="100" value="26">
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <label class="control-label">Mass</label>
+                <span class="value-display" id="massValue">10</span>
+            </div>
+            <input type="range" class="slider" id="massSlider" min="1" max="50" value="10">
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Presets</label>
+            <div class="presets">
+                <button class="preset-btn active" data-preset="default">Default</button>
+                <button class="preset-btn" data-preset="bouncy">Bouncy</button>
+                <button class="preset-btn" data-preset="smooth">Smooth</button>
+                <button class="preset-btn" data-preset="rigid">Rigid</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="advancedDemo" class="demo-advanced">
+        <div class="spring-target" id="springTarget"></div>
+        <div class="visualization" id="visualization"></div>
+    </div>
+</div>
+
+<script>
+    const {Rk4thSpring} = Spring;
+    const presets = {
+        default: {mass: 10, tension: 170, friction: 26},
+        bouncy: {mass: 5, tension: 400, friction: 15},
+        smooth: {mass: 15, tension: 120, friction: 50},
+        rigid: {mass: 2, tension: 500, friction: 40}
+    };
+
+    class SpringPoint {
+        constructor(x, y, target, index, totalPoints) {
+            this.x = x;
+            this.y = y;
+            this.index = index;
+            this.totalPoints = totalPoints;
+
+            this.element = document.createElement('div');
+            this.element.className = 'spring-point';
+            this.element.style.left = x + 'px';
+            this.element.style.top = y + 'px';
+
+            this.line = document.createElement('div');
+            this.line.className = 'spring-line';
+
+            this.springX = new Rk4thSpring({
+                mass: 10,
+                tension: 170,
+                friction: 26,
+                initialValue: x
+            });
+
+            this.springY = new Rk4thSpring({
+                mass: 10,
+                tension: 170,
+                friction: 26,
+                initialValue: y
+            });
+
+            this.target = target;
+            this.isDragging = false;
+            this.setupDrag();
+
+            // Create visualization bar
+            this.vizBar = document.createElement('div');
+            this.vizBar.className = 'viz-bar';
+            visualization.appendChild(this.vizBar);
+        }
+
+        setupDrag() {
+            this.element.addEventListener('pointerdown', (e) => {
+                this.isDragging = true;
+                this.element.classList.add('active');
+                this.element.setPointerCapture(e.pointerId);
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!this.isDragging) return;
+                const rect = demo.getBoundingClientRect();
+                this.x = e.clientX - rect.left;
+                this.y = e.clientY - rect.top;
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+            });
+
+            window.addEventListener('pointerup', () => {
+                this.isDragging = false;
+                this.element.classList.remove('active');
+            });
+        }
+
+        update() {
+            if (!this.isDragging) {
+                const targetRect = this.target.getBoundingClientRect();
+                const demoRect = demo.getBoundingClientRect();
+                const targetX = targetRect.left - demoRect.left + targetRect.width / 2;
+                const targetY = targetRect.top - demoRect.top + targetRect.height / 2;
+
+                // Add some phase offset based on point index
+                const phase = (this.index / this.totalPoints) * Math.PI * 2;
+                const offset = Math.sin(Date.now() / 1000 + phase) * 10;
+
+                this.springX.start(targetX + offset);
+                this.springY.start(targetY + offset);
+
+                this.x = this.springX.value;
+                this.y = this.springY.value;
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+            }
+
+            // Update connection line
+            const dx = this.target.offsetLeft + this.target.offsetWidth / 2 - this.x;
+            const dy = this.target.offsetTop + this.target.offsetHeight / 2 - this.y;
+            const angle = Math.atan2(dy, dx);
+            const length = Math.sqrt(dx * dx + dy * dy);
+
+            this.line.style.left = this.x + 'px';
+            this.line.style.top = this.y + 'px';
+            this.line.style.width = length + 'px';
+            this.line.style.transform = `rotate(${angle}rad)`;
+
+            // Update visualization
+            const velocity = Math.sqrt(
+                this.springX.velocity * this.springX.velocity +
+                this.springY.velocity * this.springY.velocity
+            );
+            const height = Math.min(100, velocity / 5);
+            this.vizBar.style.height = `${height}%`;
+        }
+
+        updateSpringConfig(mass, tension, friction) {
+            this.springX.mass = mass;
+            this.springX.tension = tension;
+            this.springX.friction = friction;
+
+            this.springY.mass = mass;
+            this.springY.tension = tension;
+            this.springY.friction = friction;
+        }
+    }
+
+    const demo = document.getElementById('advancedDemo');
+    const target = document.getElementById('springTarget');
+    const visualization = document.getElementById('visualization');
+    const points = [];
+
+    // Create spring points in a circle
+    const centerX = demo.offsetWidth / 2;
+    const centerY = demo.offsetHeight / 2;
+    const radius = 200;
+    const numPoints = 12;
+
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * Math.PI * 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+
+        const point = new SpringPoint(x, y, target, i, numPoints);
+        demo.appendChild(point.element);
+        demo.appendChild(point.line);
+        points.push(point);
+    }
+
+    // Target dragging
+    let isDraggingTarget = false;
+    let targetStartX, targetStartY;
+    let pointerStartX, pointerStartY;
+
+    target.addEventListener('pointerdown', (e) => {
+        isDraggingTarget = true;
+        target.classList.add('active');
+        target.setPointerCapture(e.pointerId);
+
+        const rect = demo.getBoundingClientRect();
+        pointerStartX = e.clientX - rect.left;
+        pointerStartY = e.clientY - rect.top;
+        targetStartX = target.offsetLeft;
+        targetStartY = target.offsetTop;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (!isDraggingTarget) return;
+
+        const rect = demo.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const dx = x - pointerStartX;
+        const dy = y - pointerStartY;
+
+        target.style.left = targetStartX + dx + 'px';
+        target.style.top = targetStartY + dy + 'px';
+    });
+
+    window.addEventListener('pointerup', () => {
+        isDraggingTarget = false;
+        target.classList.remove('active');
+    });
+
+    // Spring configuration controls
+    const tensionSlider = document.getElementById('tensionSlider');
+    const frictionSlider = document.getElementById('frictionSlider');
+    const massSlider = document.getElementById('massSlider');
+    const tensionValue = document.getElementById('tensionValue');
+    const frictionValue = document.getElementById('frictionValue');
+    const massValue = document.getElementById('massValue');
+
+    function updateSpringConfig() {
+        const tension = parseFloat(tensionSlider.value);
+        const friction = parseFloat(frictionSlider.value);
+        const mass = parseFloat(massSlider.value);
+
+        tensionValue.textContent = tension;
+        frictionValue.textContent = friction;
+        massValue.textContent = mass;
+
+        points.forEach(point => {
+            point.updateSpringConfig(mass, tension, friction);
+        });
+
+        // Update active preset button
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const preset = presets[btn.dataset.preset];
+            if (!preset) return;
+
+            // Update sliders and values
+            tensionSlider.value = preset.tension;
+            frictionSlider.value = preset.friction;
+            massSlider.value = preset.mass;
+
+            // Update spring configuration
+            updateSpringConfig();
+
+            // Update active state
+            document.querySelectorAll('.preset-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            btn.classList.add('active');
+        });
+    });
+
+    // Add mouse trail effect
+    let mouseX = centerX;
+    let mouseY = centerY;
+    demo.addEventListener('mousemove', (e) => {
+        const rect = demo.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    });
+
+    // Slider event listeners
+    tensionSlider.addEventListener('input', updateSpringConfig);
+    frictionSlider.addEventListener('input', updateSpringConfig);
+    massSlider.addEventListener('input', updateSpringConfig);
+
+    // Animation loop with advanced effects
+    let time = 0;
+
+    function animate() {
+        time += 0.01;
+
+        // Update all spring points
+        points.forEach((point, index) => {
+            // Add subtle ambient motion
+            if (!point.isDragging && !isDraggingTarget) {
+                const ambientX = Math.sin(time + index * 0.5) * 2;
+                const ambientY = Math.cos(time + index * 0.5) * 2;
+
+                point.springX.velocity += ambientX * 0.1;
+                point.springY.velocity += ambientY * 0.1;
+            }
+
+            // Mouse influence
+            const dx = mouseX - point.x;
+            const dy = mouseY - point.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const influence = Math.max(0, 1 - distance / 200);
+
+            if (influence > 0 && !point.isDragging && !isDraggingTarget) {
+                point.springX.velocity += dx * influence * 0.02;
+                point.springY.velocity += dy * influence * 0.02;
+            }
+
+            point.update();
+        });
+
+        // Update visualization opacity based on overall system energy
+        const totalEnergy = points.reduce((sum, point) => {
+            const velocity = Math.sqrt(
+                point.springX.velocity * point.springX.velocity +
+                point.springY.velocity * point.springY.velocity
+            );
+            return sum + velocity;
+        }, 0);
+
+        visualization.style.opacity = Math.min(1, totalEnergy / 1000);
+
+        requestAnimationFrame(animate);
+    }
+
+    // Handle window resize
+    function handleResize() {
+        const centerX = demo.offsetWidth / 2;
+        const centerY = demo.offsetHeight / 2;
+
+        // Update target position
+        if (!isDraggingTarget) {
+            target.style.left = (centerX - target.offsetWidth / 2) + 'px';
+            target.style.top = (centerY - target.offsetHeight / 2) + 'px';
+        }
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    // Initial setup
+    handleResize();
+
+    // Start animation
+    animate();
+
+    // Add touch event handling for mobile
+    demo.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent scrolling
+    }, {passive: false});
+
+    // Add keyboard controls for accessibility
+    document.addEventListener('keydown', (e) => {
+        if (!isDraggingTarget) return;
+
+        const step = 10;
+        switch (e.key) {
+            case 'ArrowLeft':
+                target.style.left = (target.offsetLeft - step) + 'px';
+                break;
+            case 'ArrowRight':
+                target.style.left = (target.offsetLeft + step) + 'px';
+                break;
+            case 'ArrowUp':
+                target.style.top = (target.offsetTop - step) + 'px';
+                break;
+            case 'ArrowDown':
+                target.style.top = (target.offsetTop + step) + 'px';
+                break;
+        }
+    });
+
+    // Add experimental features
+    let isExperimentalMode = false;
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'e' && e.ctrlKey) {
+            isExperimentalMode = !isExperimentalMode;
+            demo.style.background = isExperimentalMode ?
+                'linear-gradient(145deg, #1a1a1a, #2a2a2a)' :
+                'linear-gradient(145deg, #f8fafc, #e2e8f0)';
+
+            points.forEach(point => {
+                point.element.style.mixBlendMode = isExperimentalMode ? 'screen' : 'normal';
+                point.line.style.mixBlendMode = isExperimentalMode ? 'screen' : 'normal';
+            });
+        }
+    });
+</script>
+</body>
+</html>

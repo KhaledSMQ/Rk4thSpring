@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Animation Examples</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: var(--primary-dark);
+        }
+
+        .demo-container {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-dark);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn.active {
+            background: var(--primary-dark);
+        }
+
+        .value-display {
+            background: var(--background);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            border: 1px solid var(--border);
+        }
+
+        .animation-stage {
+            background: var(--background);
+            height: 200px;
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .animated-box {
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            border-radius: 8px;
+            position: absolute;
+            top: 50%;
+            transform: translate(0, -50%);
+            cursor: grab;
+            touch-action: none;
+        }
+
+
+        .animated-box:active {
+            cursor: grabbing;
+        }
+
+        .menu-demo {
+            background: var(--surface);
+            width: 300px;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            right: 0;
+            box-shadow: -4px 0 6px -1px rgb(0 0 0 / 0.1);
+            transform: translateX(100%);
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .menu-demo {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Spring Animation Examples</h1>
+
+    <!-- Drag Example -->
+    <div class="demo-container">
+        <h2>Drag and Drop with Spring Physics</h2>
+        <div class="controls">
+            <button class="btn preset-btn" data-preset="gentle">Gentle</button>
+            <button class="btn preset-btn" data-preset="wobbly">Wobbly</button>
+            <button class="btn preset-btn" data-preset="stiff">Stiff</button>
+            <button class="btn preset-btn" data-preset="slow">Slow</button>
+            <button class="btn preset-btn" data-preset="molasses">Molasses</button>
+            <button class="btn preset-btn" data-preset="avati">Avati</button>
+            <span>Position: <span id="dragPositionDisplay" class="value-display">0</span></span>
+        </div>
+        <div id="dragStage" class="animation-stage">
+            <div id="dragBox" class="animated-box"></div>
+        </div>
+    </div>
+
+    <!-- Bounded Example -->
+    <div class="demo-container">
+        <h2>Bounded Animation</h2>
+        <div class="controls">
+            <button class="btn" id="throwLeft">Throw Left</button>
+            <button class="btn" id="throwRight">Throw Right</button>
+            <span>Position: <span id="boundedPositionDisplay" class="value-display">0</span></span>
+        </div>
+        <div id="boundedStage" class="animation-stage">
+            <div id="boundedBox" class="animated-box bounded-box"></div>
+        </div>
+    </div>
+
+    <!-- Menu Example -->
+    <div class="demo-container">
+        <h2>Sliding Menu</h2>
+        <button class="btn" id="toggleMenu">Toggle Menu</button>
+    </div>
+</div>
+
+<div id="springMenu" class="menu-demo">
+    <h2>Spring Menu</h2>
+    <p>This menu slides in and out with spring physics for natural movement.</p>
+</div>
+<script type="module">
+    import {Rk4thSpring} from '../dist/index.mjs'
+
+    /**
+     * Bounded Animation options.
+     */
+
+    export class BoundedAnimation extends Rk4thSpring {
+        // Boundary constraints
+        minValue
+        maxValue
+        restitutionCoefficient
+
+        constructor(options = {}) {
+            super(options);
+
+            // Boundary constraints
+            this.minValue = options.minValue !== undefined ? options.minValue : -Infinity;
+            this.maxValue = options.maxValue !== undefined ? options.maxValue : Infinity;
+            this.restitutionCoefficient = options.restitutionCoefficient !== undefined ? options.restitutionCoefficient : 0.5;
+        }
+
+        /**
+         * Overrides the update method to add boundary constraints and elastic collisions.
+         * @param deltaTime - The time elapsed since the last update.
+         * @returns Whether the animation should stop.
+         */
+        update(deltaTime) {
+            const shouldStop = super.update(deltaTime);
+
+            // Apply position clamping and elastic collision
+            if (this.value < this.minValue) {
+                this.value = this.minValue;
+                this.velocity = -this.velocity * this.restitutionCoefficient;
+            } else if (this.value > this.maxValue) {
+                this.value = this.maxValue;
+                this.velocity = -this.velocity * this.restitutionCoefficient;
+            }
+
+            return shouldStop;
+        }
+
+        /**
+         * Sets the boundary constraints for the animation.
+         * @param min - The minimum value.
+         * @param max - The maximum value.
+         */
+        setBounds(min, max) {
+            this.minValue = min;
+            this.maxValue = max;
+        }
+    }
+
+    // Drag Example
+    const dragBox = document.getElementById('dragBox');
+    const dragStage = document.getElementById('dragStage');
+    const dragPositionDisplay = document.getElementById('dragPositionDisplay');
+
+    const dragAnimation = new Rk4thSpring({
+        tension: 170,
+        friction: 26
+    });
+
+    let isDragging = false;
+    let startX = 0;
+    let startDragX = 0;
+
+    dragBox.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        dragBox.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+        startDragX = dragAnimation.value;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        dragAnimation.setValue(startDragX + dx);
+        updateDragBox(dragAnimation.value);
+    });
+
+    window.addEventListener('pointerup', () => {
+        isDragging = false;
+    });
+
+    function updateDragBox(x) {
+        const stageRect = dragStage.getBoundingClientRect();
+        const boxRect = dragBox.getBoundingClientRect();
+        const maxX = stageRect.width - boxRect.width;
+        const maxValue = Math.min(Math.max(x, 0), maxX)
+        dragBox.style.transform = `translate(${maxValue}px, -50%)`;
+        dragPositionDisplay.textContent = Math.round(maxValue);
+    }
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            dragAnimation.applyPreset(btn.dataset.preset);
+        });
+    });
+
+    // Bounded Example
+    const boundedBox = document.getElementById('boundedBox');
+    const boundedStage = document.getElementById('boundedStage');
+    const boundedPositionDisplay = document.getElementById('boundedPositionDisplay');
+
+    const boundedAnimation = new BoundedAnimation({
+        tension: 170,
+        friction: 26,
+        minValue: 0,
+        maxValue: boundedStage.clientWidth - 60,
+        restitutionCoefficient: 0.5
+    });
+
+    function updateBoundedBox(x) {
+        boundedBox.style.transform = `translate(${x}px, -50%)`;
+        boundedPositionDisplay.textContent = Math.round(x);
+    }
+
+
+    boundedAnimation.onUpdate = updateBoundedBox;
+    boundedAnimation.start(boundedAnimation.maxValue / 2);
+
+    document.getElementById('throwLeft').addEventListener('click', () => {
+        boundedAnimation.velocity = -1000;
+
+        boundedAnimation.start(boundedAnimation.maxValue / 2);
+    });
+
+    document.getElementById('throwRight').addEventListener('click', () => {
+        boundedAnimation.velocity = 1000;
+        boundedAnimation.start(boundedAnimation.maxValue / 2);
+    });
+
+    // Menu Example
+    const menu = document.getElementById('springMenu');
+    const menuAnimation = new Rk4thSpring({
+        tension: 170,
+        friction: 26
+    });
+
+    let menuOpen = false;
+
+    menuAnimation.onUpdate = (value) => {
+        menu.style.transform = `translateX(${value}%)`;
+    };
+
+    document.getElementById('toggleMenu').addEventListener('click', () => {
+        menuOpen = !menuOpen;
+        menuAnimation.start(menuOpen ? 0 : 100);
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        boundedAnimation.maxValue = boundedStage.clientWidth - 60;
+    });
+</script>
+</body>
+</html>

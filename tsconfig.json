@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    // Modern JavaScript output
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    // Output configuration
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationDir": "./dist/types",
+
+    // Build optimization
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    // Type checking
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Source maps for debugging
+    "sourceMap": true,
+
+    // Let bundler handle emission
+    "noEmit": true,
+
+    "types": [
+      "vitest/importMeta"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Animation Scroll & Sliding Examples</title>
+    <script src="../dist/index.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .demo-section {
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 1200px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Smooth Scroll Snap Demo */
+        .scroll-snap-container {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .scroll-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+        }
+
+        .scroll-section {
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .scroll-section:nth-child(1) {
+            background: #3498db;
+        }
+
+        .scroll-section:nth-child(2) {
+            background: #e74c3c;
+        }
+
+        .scroll-section:nth-child(3) {
+            background: #2ecc71;
+        }
+
+        .scroll-section:nth-child(4) {
+            background: #9b59b6;
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .scroll-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ddd;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .scroll-dot.active {
+            background: #3498db;
+        }
+
+        /* Parallax Cards Demo */
+        .parallax-container {
+            height: 600px;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            perspective: 1px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .parallax-card {
+            position: relative;
+            height: 300px;
+            margin: 40px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform-style: preserve-3d;
+        }
+
+        /* Sliding Carousel Demo */
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+
+        .carousel-track {
+            display: flex;
+            height: 100%;
+        }
+
+        .carousel-slide {
+            min-width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .carousel-slide:nth-child(1) {
+            background: #3498db;
+        }
+
+        .carousel-slide:nth-child(2) {
+            background: #e74c3c;
+        }
+
+        .carousel-slide:nth-child(3) {
+            background: #2ecc71;
+        }
+
+        .carousel-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1;
+        }
+
+        .carousel-button.prev {
+            left: 20px;
+        }
+
+        .carousel-button.next {
+            right: 20px;
+        }
+
+        /* Controls */
+        .controls {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .button {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 8px;
+        }
+
+        .button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+<div class="demo-section">
+    <h2>Smooth Scroll Snap</h2>
+    <div class="controls">
+        <button class="button" onclick="scrollDemo.scrollToNext()">Next Section</button>
+        <button class="button" onclick="scrollDemo.scrollToPrev()">Previous Section</button>
+    </div>
+    <div class="scroll-snap-container">
+        <div class="scroll-content">
+            <div class="scroll-section">Section 1</div>
+            <div class="scroll-section">Section 2</div>
+            <div class="scroll-section">Section 3</div>
+            <div class="scroll-section">Section 4</div>
+        </div>
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<div class="demo-section">
+    <h2>Spring-based Carousel</h2>
+    <div class="carousel-container">
+        <button class="carousel-button prev" onclick="carouselDemo.prev()">&larr;</button>
+        <button class="carousel-button next" onclick="carouselDemo.next()">&rarr;</button>
+        <div class="carousel-track">
+            <div class="carousel-slide">Slide 1</div>
+            <div class="carousel-slide">Slide 2</div>
+            <div class="carousel-slide">Slide 3</div>
+        </div>
+    </div>
+</div>
+
+<div class="demo-section">
+    <h2>Parallax Scroll Cards</h2>
+    <div class="parallax-container">
+        <div class="parallax-card">Card 1</div>
+        <div class="parallax-card">Card 2</div>
+        <div class="parallax-card">Card 3</div>
+        <div class="parallax-card">Card 4</div>
+    </div>
+</div>
+
+<script>
+    const {Rk4thSpring} = Spring;
+
+    // Smooth Scroll Snap Demo
+    class ScrollDemo {
+        constructor() {
+            this.container = document.querySelector('.scroll-snap-container');
+            this.content = document.querySelector('.scroll-content');
+            this.sections = document.querySelectorAll('.scroll-section');
+            this.currentIndex = 0;
+
+            this.spring = new Rk4thSpring({
+                mass: 1,
+                tension: 170,
+                friction: 26,
+                precision: 0.1
+            });
+
+            this.setupScrollIndicator();
+            this.setupWheelListener();
+            this.updateScrollIndicator();
+        }
+
+        setupScrollIndicator() {
+            const indicator = document.querySelector('.scroll-indicator');
+            this.sections.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'scroll-dot';
+                dot.addEventListener('click', () => this.scrollToSection(index));
+                indicator.appendChild(dot);
+            });
+        }
+
+        setupWheelListener() {
+            let wheelTimeout;
+            this.container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                clearTimeout(wheelTimeout);
+                wheelTimeout = setTimeout(() => {
+                    if (e.deltaY > 0) {
+                        this.scrollToNext();
+                    } else {
+                        this.scrollToPrev();
+                    }
+                }, 50);
+            });
+        }
+
+        scrollToSection(index) {
+            this.currentIndex = Math.max(0, Math.min(index, this.sections.length - 1));
+            const targetY = -this.currentIndex * this.container.clientHeight;
+
+            this.spring.start(targetY, (y) => {
+                this.content.style.transform = `translateY(${y}px)`;
+            });
+
+            this.updateScrollIndicator();
+        }
+
+        scrollToNext() {
+            this.scrollToSection(this.currentIndex + 1);
+        }
+
+        scrollToPrev() {
+            this.scrollToSection(this.currentIndex - 1);
+        }
+
+        updateScrollIndicator() {
+            const dots = document.querySelectorAll('.scroll-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === this.currentIndex);
+            });
+        }
+    }
+
+    // Carousel Demo
+    class CarouselDemo {
+        constructor() {
+            this.track = document.querySelector('.carousel-track');
+            this.slides = document.querySelectorAll('.carousel-slide');
+            this.currentIndex = 0;
+
+            this.spring = new Rk4thSpring({
+                mass: 1,
+                tension: 180,
+                friction: 24,
+                precision: 0.1
+            });
+
+            this.setupDragBehavior();
+        }
+
+        setupDragBehavior() {
+            let startX = 0;
+            let currentTranslate = 0;
+            let isDragging = false;
+
+            this.track.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                currentTranslate = this.getCurrentTranslate();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const diff = e.clientX - startX;
+                this.track.style.transform = `translateX(${currentTranslate + diff}px)`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                const currentPosition = this.getCurrentTranslate();
+                const slideWidth = this.slides[0].clientWidth;
+                const snapPoint = Math.round(currentPosition / slideWidth) * slideWidth;
+                this.spring.start(snapPoint, (x) => {
+                    this.track.style.transform = `translateX(${x}px)`;
+                });
+            });
+        }
+
+        getCurrentTranslate() {
+            const style = window.getComputedStyle(this.track);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            return matrix.m41;
+        }
+
+        next() {
+            this.currentIndex = Math.min(this.currentIndex + 1, this.slides.length - 1);
+            this.updateSlidePosition();
+        }
+
+        prev() {
+            this.currentIndex = Math.max(this.currentIndex - 1, 0);
+            this.updateSlidePosition();
+        }
+
+        updateSlidePosition() {
+            const slideWidth = this.slides[0].clientWidth;
+            const targetX = -this.currentIndex * slideWidth;
+
+            this.spring.start(targetX, (x) => {
+                this.track.style.transform = `translateX(${x}px)`;
+            });
+        }
+    }
+
+    // Parallax Cards Demo
+    class ParallaxDemo {
+        constructor() {
+            this.container = document.querySelector('.parallax-container');
+            this.cards = document.querySelectorAll('.parallax-card');
+
+            this.springs = Array.from(this.cards).map(() => new Rk4thSpring({
+                mass: 1,
+                tension: 150,
+                friction: 20
+            }));
+
+            this.setupParallax();
+        }
+
+        setupParallax() {
+            this.container.addEventListener('scroll', () => {
+                const containerRect = this.container.getBoundingClientRect();
+
+                this.cards.forEach((card, index) => {
+                    const cardRect = card.getBoundingClientRect();
+                    const relativePosition = (cardRect.top - containerRect.top) / containerRect.height;
+
+                    this.springs[index].start(relativePosition * 30, (y) => {
+                        card.style.transform = `translateY(${y}px) scale(${1 - Math.abs(relativePosition) * 0.1})`;
+                    });
+                });
+            });
+        }
+    }
+
+    // Initialize demos
+    let scrollDemo, carouselDemo, parallaxDemo;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        scrollDemo = new ScrollDemo();
+        carouselDemo = new CarouselDemo();
+        parallaxDemo = new ParallaxDemo();
+    });
+</script>
+</body>
+</html>
